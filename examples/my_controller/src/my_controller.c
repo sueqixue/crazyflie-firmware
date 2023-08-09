@@ -70,7 +70,8 @@ typedef enum {
     idle,
     lowUnlock,
     unlocked,
-    stopping
+    stopping,
+    hovering                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 } State;
 
 static State state = idle;
@@ -106,8 +107,31 @@ void appMain() {
     vTaskDelay(M2T(10));
 
     uint16_t up = logGetUint(idUp);
+    DEBUG_PRINT("Ready to activate ...\n");
+    DEBUG_PRINT("%i", up);
+
+    // Try to make the drone hovering
+    if (state == hovering) {
+      DEBUG_PRINT("Hovering ...\n");
+
+      uint16_t up_o = radius - MIN(up, radius);
+      float height = height_sp - up_o/1000.0f;
+
+      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);
+
+      if (1) {
+        setHoverSetpoint(&setpoint, 0, 0, height, 0);
+        commanderSetSetpoint(&setpoint, 3);
+      }
+
+      if (height < 0.1f) {
+        state = stopping;
+        DEBUG_PRINT("X\n");
+      }
+    }
 
     if (state == unlocked) {
+      DEBUG_PRINT("Unlocked ...\n");
       uint16_t left = logGetUint(idLeft);
       uint16_t right = logGetUint(idRight);
       uint16_t front = logGetUint(idFront);
@@ -145,6 +169,7 @@ void appMain() {
     } else {
 
       if (state == stopping && up > stoppedTh) {
+        DEBUG_PRINT("Stopping ...\n");
         DEBUG_PRINT("%i", up);
         state = idle;
         DEBUG_PRINT("S\n");
@@ -161,6 +186,7 @@ void appMain() {
       }
 
       if (state == idle || state == stopping) {
+        DEBUG_PRINT("Idle or stopping...\n");
         memset(&setpoint, 0, sizeof(setpoint_t));
         commanderSetSetpoint(&setpoint, 3);
       }
