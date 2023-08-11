@@ -74,7 +74,7 @@ typedef enum {
     hovering                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 } State;
 
-static State state = idle;
+static State state = hovering;
 
 static const uint16_t unlockThLow = 100;
 static const uint16_t unlockThHigh = 300;
@@ -83,7 +83,7 @@ static const uint16_t stoppedTh = 500;
 static const float velMax = 1.0f;
 static const uint16_t radius = 300;
 
-static const float height_sp = 0.2f;
+static const float height_sp = 0.0f;
 
 #define MAX(a,b) ((a>b)?a:b)
 #define MIN(a,b) ((a<b)?a:b)
@@ -91,15 +91,15 @@ static const float height_sp = 0.2f;
 void appMain() {
   static setpoint_t setpoint;
 
-  vTaskDelay(M2T(3000));
+  vTaskDelay(M2T(5000));
 
   logVarId_t idUp = logGetVarId("range", "up");
-  logVarId_t idLeft = logGetVarId("range", "left");
-  logVarId_t idRight = logGetVarId("range", "right");
-  logVarId_t idFront = logGetVarId("range", "front");
-  logVarId_t idBack = logGetVarId("range", "back");
+  // logVarId_t idLeft = logGetVarId("range", "left");
+  // logVarId_t idRight = logGetVarId("range", "right");
+  // logVarId_t idFront = logGetVarId("range", "front");
+  // logVarId_t idBack = logGetVarId("range", "back");
 
-  float factor = velMax/radius;
+  // float factor = velMax/radius;
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
@@ -108,28 +108,29 @@ void appMain() {
 
     uint16_t up = logGetUint(idUp);
     DEBUG_PRINT("Ready to activate ...\n");
-    DEBUG_PRINT("%i", up);
+    DEBUG_PRINT("up=%i\n", up);
 
     // Try to make the drone hovering
     if (state == hovering) {
       DEBUG_PRINT("Hovering ...\n");
 
       uint16_t up_o = radius - MIN(up, radius);
-      float height = height_sp - up_o/1000.0f;
+      float height = height_sp + up_o/10000.0f;
 
-      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);
+      DEBUG_PRINT("up_o=%i, height=%f\n", up_o, (double)height);
 
       if (1) {
         setHoverSetpoint(&setpoint, 0, 0, height, 0);
         commanderSetSetpoint(&setpoint, 3);
       }
 
-      if (height < 0.1f) {
+      if (height > 0.5f) {
         state = stopping;
         DEBUG_PRINT("X\n");
       }
     }
-
+    
+    /*
     if (state == unlocked) {
       DEBUG_PRINT("Unlocked ...\n");
       uint16_t left = logGetUint(idLeft);
@@ -152,9 +153,9 @@ void appMain() {
       uint16_t up_o = radius - MIN(up, radius);
       float height = height_sp - up_o/1000.0f;
 
-      /*DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
+      DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
       DEBUG_PRINT("f=%i, b=%i, fo=%f, bo=%f, vel=%f\n", front_o, back_o, f_comp, b_comp, velFront);
-      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);*/
+      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);
 
       if (1) {
         setHoverSetpoint(&setpoint, velFront, velSide, height, 0);
@@ -191,6 +192,7 @@ void appMain() {
         commanderSetSetpoint(&setpoint, 3);
       }
     }
+    */
   }
 }
 
