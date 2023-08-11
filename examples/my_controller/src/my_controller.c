@@ -71,10 +71,12 @@ typedef enum {
     lowUnlock,
     unlocked,
     stopping,
-    hovering                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+    hovering,
+    p_controling,
+    v_controling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 } State;
 
-static State state = hovering;
+static State state = v_controling;
 
 static const uint16_t unlockThLow = 100;
 static const uint16_t unlockThHigh = 300;
@@ -110,9 +112,8 @@ void appMain() {
     DEBUG_PRINT("Ready to activate ...\n");
     DEBUG_PRINT("up=%i\n", up);
 
-    // Try to make the drone hovering
-    if (state == hovering) {
-      DEBUG_PRINT("Hovering ...\n");
+    if (state == p_controling) {
+      DEBUG_PRINT("Taking off ...\n");
 
       uint16_t up_o = radius - MIN(up, radius);
       float height = height_sp + up_o/10000.0f;
@@ -125,8 +126,39 @@ void appMain() {
       }
 
       if (height > 0.5f) {
-        state = stopping;
-        DEBUG_PRINT("X\n");
+        state = hovering;
+        // DEBUG_PRINT("X\n");
+      }
+    }
+
+    // Under Implementation
+    if (state == v_controling) {
+      DEBUG_PRINT("Taking off ...\n");
+
+      // uint16_t up_o = radius - MIN(up, radius);
+      // float height = height_sp + up_o/10000.0f;
+      float height = height_sp;
+
+      // DEBUG_PRINT("up_o=%i, height=%f\n", up_o, (double)height);
+
+      if (1) {
+        setHoverSetpoint(&setpoint, 0, 0, 0, 0);
+        commanderSetSetpoint(&setpoint, 3);
+      }
+
+      if (height > 0.5f) {
+        state = hovering;
+        // DEBUG_PRINT("X\n");
+      }
+    }
+
+
+    if (state == hovering) {
+      DEBUG_PRINT("Hovering ...\n");
+
+      if (1) {
+        setHoverSetpoint(&setpoint, 0, 0, 0.5f, 0);
+        commanderSetSetpoint(&setpoint, 3);
       }
     }
     
