@@ -24,10 +24,10 @@
  *
  * Modified based on push.c
  */
-
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+// #include <stdio.h>
 
 #include "app.h"
 
@@ -47,25 +47,39 @@
 
 #include "log.h"
 #include "param.h"
+#include "crtp_commander_high_level.h"
 
-static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
+static void setHoverSetpointV(setpoint_t *setpoint, float vx, float vy, float vz, float yawrate)
 {
-  setpoint->mode.z = modeAbs;
-  setpoint->position.z = z;
-
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->mode.z = modeVelocity;
+  
+  setpoint->velocity.x = vx;
+  setpoint->velocity.y = vy;
+  setpoint->velocity.z = vz;
 
   setpoint->mode.yaw = modeVelocity;
   setpoint->attitudeRate.yaw = yawrate;
 
-
-  setpoint->mode.x = modeVelocity;
-  setpoint->mode.y = modeVelocity;
-  setpoint->velocity.x = vx;
-  setpoint->velocity.y = vy;
-
   setpoint->velocity_body = true;
 }
 
+static void setHoverSetpointP(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
+{
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->mode.z = modeAbs;
+  
+  setpoint->velocity.x = vx;
+  setpoint->velocity.y = vy;
+  setpoint->velocity.z = v
+
+  setpoint->mode.yaw = modeVelocity;
+  setpoint->attitudeRate.yaw = yawrate;
+
+  setpoint->velocity_body = true;
+}
 typedef enum {
     idle,
     lowUnlock,
@@ -76,7 +90,9 @@ typedef enum {
     v_controling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 } State;
 
-static State state = v_controling;
+static State state = idle;
+
+// static bool sleeping = true;
 
 static const uint16_t unlockThLow = 100;
 static const uint16_t unlockThHigh = 300;
@@ -85,7 +101,7 @@ static const uint16_t stoppedTh = 500;
 static const float velMax = 1.0f;
 static const uint16_t radius = 300;
 
-static const float height_sp = 0.0f;
+static const float height_sp = 0.3f;
 
 #define MAX(a,b) ((a>b)?a:b)
 #define MIN(a,b) ((a<b)?a:b)
@@ -93,8 +109,9 @@ static const float height_sp = 0.0f;
 void appMain() {
   static setpoint_t setpoint;
 
+  DEBUG_PRINT("\n\n\n\nWaiting for activation ...\n");
   vTaskDelay(M2T(5000));
-
+  
   logVarId_t idUp = logGetVarId("range", "up");
   // logVarId_t idLeft = logGetVarId("range", "left");
   // logVarId_t idRight = logGetVarId("range", "right");
@@ -103,20 +120,37 @@ void appMain() {
 
   // float factor = velMax/radius;
 
-  DEBUG_PRINT("Waiting for activation ...\n");
+  // Taking off
+  DEBUG_PRINT("Taking off ...\n");
+  // int t_err = crtpCommanderHighLevelTakeoffWithVelocity(1.0, 0.1, false);
+  // DEBUG_PRINT("t_err=%d\n", t_err);
+  for (int i = 0; i < 30; i++) {
+    DEBUG_PRINT("i=%d\n", i);
+    setHoverSetpointV(&setpoint, 0.0f,  0.0f, 0.01f, 0.0f);
+    commanderSetSetpoint(&setpoint, 3);
+    vTaskDelay(M2T(10));
+  }
 
-  while(1) {
+  // Landing
+  DEBUG_PRINT("Landing ...\n");
+  for (int i = 0; i < 30; i++) {
+    float height = 0.3 - 0.01 * i
+    setHoverSetpointP(&setpoint, 0.0f,  0.0f, height, 0.0f);
+    commanderSetSetpoint(&setpoint, 3);
+    vTaskDelay(M2T(10));
+  }
+
+  // Hovering
+  while (1) {
     vTaskDelay(M2T(10));
 
     uint16_t up = logGetUint(idUp);
-    DEBUG_PRINT("Ready to activate ...\n");
-    DEBUG_PRINT("up=%i\n", up);
+    
+    // DEBUG_PRINT("up=%i\n", up);
 
-    if (state == p_controling) {
-      DEBUG_PRINT("Taking off ...\n");
-
+    if (state == unlocked) {
       uint16_t up_o = radius - MIN(up, radius);
-      float height = height_sp + up_o/10000.0f;
+      float height = height_sp - up_o/1000.0f;
 
       DEBUG_PRINT("up_o=%i, height=%f\n", up_o, (double)height);
 
@@ -125,39 +159,13 @@ void appMain() {
         commanderSetSetpoint(&setpoint, 3);
       }
 
-      if (height > 0.5f) {
-        state = hovering;
-        // DEBUG_PRINT("X\n");
+      if (height < 0.1f) {
+        state = stopping;
+        DEBUG_PRINT("X\n");
       }
-    }
-
-    // Under Implementation
-    if (state == v_controling) {
-      DEBUG_PRINT("Taking off ...\n");
-
-      // uint16_t up_o = radius - MIN(up, radius);
-      // float height = height_sp + up_o/10000.0f;
-      float height = height_sp;
-
-      // DEBUG_PRINT("up_o=%i, height=%f\n", up_o, (double)height);
-
-      if (1) {
-        setHoverSetpoint(&setpoint, 0, 0, 0, 0);
-        commanderSetSetpoint(&setpoint, 3);
-      }
-
-      if (height > 0.5f) {
-        state = hovering;
-        // DEBUG_PRINT("X\n");
-      }
-    }
-
-
-    if (state == hovering) {
-      DEBUG_PRINT("Hovering ...\n");
-
-      if (1) {
-        setHoverSetpoint(&setpoint, 0, 0, 0.5f, 0);
+    } else {
+      if (state == idle) {
+        memset(&setpoint, 0, sizeof(setpoint_t));
         commanderSetSetpoint(&setpoint, 3);
       }
     }
