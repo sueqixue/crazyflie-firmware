@@ -73,7 +73,7 @@ static void setHoverSetpointP(setpoint_t *setpoint, float vx, float vy, float z,
   
   setpoint->velocity.x = vx;
   setpoint->velocity.y = vy;
-  setpoint->velocity.z = v
+  setpoint->position.z = z;
 
   setpoint->mode.yaw = modeVelocity;
   setpoint->attitudeRate.yaw = yawrate;
@@ -134,7 +134,7 @@ void appMain() {
   // Landing
   DEBUG_PRINT("Landing ...\n");
   for (int i = 0; i < 30; i++) {
-    float height = 0.3 - 0.01 * i
+    float height = 0.3 - 0.01 * i;
     setHoverSetpointP(&setpoint, 0.0f,  0.0f, height, 0.0f);
     commanderSetSetpoint(&setpoint, 3);
     vTaskDelay(M2T(10));
