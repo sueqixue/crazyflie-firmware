@@ -49,6 +49,7 @@
 #include "param.h"
 #include "crtp_commander_high_level.h"
 
+/*
 static void setHoverSetpointV(setpoint_t *setpoint, float vx, float vy, float vz, float yawrate)
 {
   setpoint->mode.x = modeVelocity;
@@ -64,6 +65,7 @@ static void setHoverSetpointV(setpoint_t *setpoint, float vx, float vy, float vz
 
   setpoint->velocity_body = true;
 }
+*/
 
 static void setHoverSetpointP(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
 {
@@ -126,16 +128,17 @@ void appMain() {
   // DEBUG_PRINT("t_err=%d\n", t_err);
   for (int i = 0; i < 30; i++) {
     DEBUG_PRINT("i=%d\n", i);
-    setHoverSetpointV(&setpoint, 0.0f,  0.0f, 0.01f, 0.0f);
-    commanderSetSetpoint(&setpoint, 3);
+    // setHoverSetpointV(&setpoint, 0.0f,  0.0f, 0.02f, 0.0f);
+    float height = 0.02 * i;
+    setHoverSetpointP(&setpoint, 0.0f,  0.0f, (double) height, 0.0f);
     vTaskDelay(M2T(10));
   }
 
   // Landing
   DEBUG_PRINT("Landing ...\n");
   for (int i = 0; i < 30; i++) {
-    float height = 0.3 - 0.01 * i;
-    setHoverSetpointP(&setpoint, 0.0f,  0.0f, height, 0.0f);
+    float height = 0.6 - 0.02 * i;
+    setHoverSetpointP(&setpoint, 0.0f,  0.0f, (double) height, 0.0f);
     commanderSetSetpoint(&setpoint, 3);
     vTaskDelay(M2T(10));
   }
@@ -155,7 +158,7 @@ void appMain() {
       DEBUG_PRINT("up_o=%i, height=%f\n", up_o, (double)height);
 
       if (1) {
-        setHoverSetpoint(&setpoint, 0, 0, height, 0);
+        setHoverSetpointP(&setpoint, 0, 0, (double)height, 0);
         commanderSetSetpoint(&setpoint, 3);
       }
 
